@@ -620,7 +620,7 @@ function CourtBookingWorkspace() {
         img.crossOrigin = 'anonymous';
         img.onload = () => resolve(img);
         img.onerror = () => resolve(null);
-        img.src = '/assets/aistudio/WhatsApp_Image_2026-11-02_at_06.31.58_20dd0823.jpeg';
+        img.src = `${import.meta.env.BASE_URL}assets/aistudio/WhatsApp_Image_2026-11-02_at_06.31.58_20dd0823.jpeg`;
       });
 
       let textStartX = 48;
@@ -840,7 +840,7 @@ function CourtBookingWorkspace() {
           className="flex items-center gap-2.5 sm:gap-3 text-lg sm:text-xl font-bold tracking-tight text-emerald-950 font-display whitespace-nowrap shrink-0"
         >
           <img
-            src="/assets/aistudio/WhatsApp_Image_2026-11-02_at_06.31.58_20dd0823.jpeg"
+            src={`${import.meta.env.BASE_URL}assets/aistudio/WhatsApp_Image_2026-11-02_at_06.31.58_20dd0823.jpeg`}
             alt="Kelab Tenis Taiping Logo"
             className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg object-cover border border-slate-200 shadow-xs shrink-0"
           />
@@ -2803,7 +2803,7 @@ function CourtBookingWorkspace() {
               <div className="flex flex-wrap items-start justify-between gap-4 pb-5 border-b border-slate-200">
                 <div className="flex items-center gap-3.5">
                   <img
-                    src="/assets/aistudio/WhatsApp_Image_2026-11-02_at_06.31.58_20dd0823.jpeg"
+                    src={`${import.meta.env.BASE_URL}assets/aistudio/WhatsApp_Image_2026-11-02_at_06.31.58_20dd0823.jpeg`}
                     alt="Kelab Tenis Taiping Logo"
                     className="w-14 h-14 rounded-lg object-cover border border-slate-200 shrink-0"
                   />
@@ -2956,11 +2956,11 @@ function CourtBookingWorkspace() {
         <div className="max-w-[1360px] mx-auto flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500">
           <div className="flex items-center gap-2.5">
             <img
-              src="/assets/aistudio/WhatsApp_Image_2026-11-02_at_06.31.58_20dd0823.jpeg"
+              src={`${import.meta.env.BASE_URL}assets/aistudio/WhatsApp_Image_2026-11-02_at_06.31.58_20dd0823.jpeg`}
               alt="Kelab Tenis Taiping Logo"
               className="w-6 h-6 rounded object-cover border border-slate-200 shrink-0"
             />
-            <span>KELAB TENIS TAIPING — Tennis Booking & Rental Management</span>
+            <span>KELAB TENIS TAIPING — Tennis Booking & Rental Management · Created by xKINGx</span>
           </div>
           <span>Currency: Malaysian Ringgit (MYR) · Rain Cancellation Waiver Policy Active</span>
         </div>
