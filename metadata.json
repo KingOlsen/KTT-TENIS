@@ -1,0 +1,8 @@
+{
+  "name": "Tennis Court Booking Management",
+  "description": "Real-time tennis court booking system for Court A \u0026 Court B with multi-slot reservations, clash prevention, rain cancellation waivers (MYR 0.00), monthly player rental billing, court maintenance scheduling, and admin rate management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

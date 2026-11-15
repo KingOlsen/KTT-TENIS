@@ -1,0 +1,450 @@
+{
+  "entities": {
+    "AdminRole": {
+      "title": "AdminRole",
+      "description": "Trusted administrator record keyed by Firebase Auth UID.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified administrator email address.",
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when admin record was created."
+        }
+      },
+      "required": ["email", "createdAt"]
+    },
+    "Player": {
+      "title": "Player",
+      "description": "Registered tennis club player who can book Court A or Court B.",
+      "type": "object",
+      "properties": {
+        "clubId": {
+          "type": "string",
+          "description": "Relational club scope identifier.",
+          "maxLength": 32,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Full display name of the player booking the court.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "membershipCode": {
+          "type": "string",
+          "description": "Club member tag or reference code.",
+          "maxLength": 24
+        },
+        "membershipType": {
+          "type": "string",
+          "description": "Player tier classification.",
+          "enum": ["Team", "Coach", "Member", "Guest"],
+          "maxLength": 20
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "UID of the authenticated user who registered this player.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": ["clubId", "name", "membershipCode", "membershipType", "createdBy", "createdAt", "updatedAt"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Single court time-slot reservation for Court A or Court B on a specific date.",
+      "type": "object",
+      "properties": {
+        "clubId": {
+          "type": "string",
+          "description": "Relational club scope identifier.",
+          "maxLength": 32,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "date": {
+          "type": "string",
+          "description": "Booking date in YYYY-MM-DD format.",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "month": {
+          "type": "string",
+          "description": "Booking month in YYYY-MM format for monthly ledger aggregation.",
+          "minLength": 7,
+          "maxLength": 7,
+          "pattern": "^\\d{4}-\\d{2}$"
+        },
+        "courtId": {
+          "type": "string",
+          "description": "Selected tennis court identifier.",
+          "enum": ["Court A", "Court B"],
+          "maxLength": 10
+        },
+        "slotId": {
+          "type": "string",
+          "description": "Time slot identifier (0800-1000 through 2200-2400).",
+          "enum": [
+            "0800-1000",
+            "1000-1200",
+            "1200-1500",
+            "1500-1700",
+            "1700-1900",
+            "2000-2200",
+            "2200-2400"
+          ],
+          "maxLength": 12
+        },
+        "playerId": {
+          "type": "string",
+          "description": "ID of the player who booked the court slot.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "playerName": {
+          "type": "string",
+          "description": "Name of the person booking the slot.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "status": {
+          "type": "string",
+          "description": "Reservation status: active or rain_cancelled (fee becomes MYR 0.00).",
+          "enum": ["active", "rain_cancelled"],
+          "maxLength": 20
+        },
+        "fee": {
+          "type": "number",
+          "description": "Current payable fee in MYR (0.00 when rain_cancelled)."
+        },
+        "standardFee": {
+          "type": "number",
+          "description": "Standard slot rental fee in MYR at time of booking."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional booking or rain cancellation remarks.",
+          "maxLength": 200
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "UID of the user who created the booking.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "clubId",
+        "date",
+        "month",
+        "courtId",
+        "slotId",
+        "playerId",
+        "playerName",
+        "status",
+        "fee",
+        "standardFee",
+        "notes",
+        "createdBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SlotPricing": {
+      "title": "SlotPricing",
+      "description": "Configurable MYR rental fee per time slot managed by admin.",
+      "type": "object",
+      "properties": {
+        "clubId": {
+          "type": "string",
+          "description": "Relational club scope identifier.",
+          "maxLength": 32,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "slotId": {
+          "type": "string",
+          "description": "Time slot identifier.",
+          "enum": [
+            "0800-1000",
+            "1000-1200",
+            "1200-1500",
+            "1500-1700",
+            "1700-1900",
+            "2000-2200",
+            "2200-2400"
+          ],
+          "maxLength": 12
+        },
+        "label": {
+          "type": "string",
+          "description": "Human-readable time range label.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "hours": {
+          "type": "number",
+          "description": "Duration of the slot in hours."
+        },
+        "fee": {
+          "type": "number",
+          "description": "Standard rental fee in MYR for this time slot."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "UID of the user who last updated the slot fee.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": ["clubId", "slotId", "label", "hours", "fee", "updatedBy", "createdAt", "updatedAt"]
+    },
+    "MonthlyAdjustment": {
+      "title": "MonthlyAdjustment",
+      "description": "Admin monthly billing override and payment status for a player in a specific YYYY-MM month.",
+      "type": "object",
+      "properties": {
+        "clubId": {
+          "type": "string",
+          "description": "Relational club scope identifier.",
+          "maxLength": 32,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "month": {
+          "type": "string",
+          "description": "Billing month in YYYY-MM format.",
+          "minLength": 7,
+          "maxLength": 7,
+          "pattern": "^\\d{4}-\\d{2}$"
+        },
+        "playerId": {
+          "type": "string",
+          "description": "Referenced player ID.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "playerName": {
+          "type": "string",
+          "description": "Player name for monthly billing record.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "overrideTotal": {
+          "type": "number",
+          "description": "Custom admin override amount in MYR (-1 indicates automatic sum of active bookings)."
+        },
+        "paymentStatus": {
+          "type": "string",
+          "description": "Monthly settlement status.",
+          "enum": ["unpaid", "paid"],
+          "maxLength": 12
+        },
+        "adminNote": {
+          "type": "string",
+          "description": "Optional billing adjustment note.",
+          "maxLength": 200
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "UID of the admin who updated the monthly billing record.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "clubId",
+        "month",
+        "playerId",
+        "playerName",
+        "overrideTotal",
+        "paymentStatus",
+        "adminNote",
+        "updatedBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "MaintenanceTask": {
+      "title": "MaintenanceTask",
+      "description": "Court maintenance schedule and log entry blocking Court A or Court B slots.",
+      "type": "object",
+      "properties": {
+        "clubId": {
+          "type": "string",
+          "description": "Relational club scope identifier.",
+          "maxLength": 32,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "date": {
+          "type": "string",
+          "description": "Maintenance date in YYYY-MM-DD format.",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "courtId": {
+          "type": "string",
+          "description": "Target court for maintenance.",
+          "enum": ["Court A", "Court B"],
+          "maxLength": 10
+        },
+        "slotId": {
+          "type": "string",
+          "description": "Specific slot blocked or ALL_DAY.",
+          "enum": [
+            "ALL_DAY",
+            "0800-1000",
+            "1000-1200",
+            "1200-1500",
+            "1500-1700",
+            "1700-1900",
+            "2000-2200",
+            "2200-2400"
+          ],
+          "maxLength": 12
+        },
+        "title": {
+          "type": "string",
+          "description": "Maintenance work summary title.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "category": {
+          "type": "string",
+          "description": "Type of court maintenance.",
+          "enum": [
+            "Surface Resurfacing",
+            "Net & Posts",
+            "Floodlight System",
+            "Line Repainting",
+            "Drainage & Rain Clearing",
+            "General Inspection"
+          ],
+          "maxLength": 40
+        },
+        "technician": {
+          "type": "string",
+          "description": "Assigned contractor or staff member.",
+          "maxLength": 80
+        },
+        "cost": {
+          "type": "number",
+          "description": "Maintenance cost in MYR."
+        },
+        "status": {
+          "type": "string",
+          "description": "Lifecycle status of the maintenance task.",
+          "enum": ["scheduled", "in_progress", "completed"],
+          "maxLength": 20
+        },
+        "notes": {
+          "type": "string",
+          "description": "Detailed maintenance notes.",
+          "maxLength": 300
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "UID of the user who logged the maintenance task.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "clubId",
+        "date",
+        "courtId",
+        "slotId",
+        "title",
+        "category",
+        "technician",
+        "cost",
+        "status",
+        "notes",
+        "createdBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminRole" },
+      "description": "Administrator registry keyed by user UID."
+    },
+    "/players/{playerId}": {
+      "schema": { "$ref": "#/entities/Player" },
+      "description": "Registered tennis players available for court bookings."
+    },
+    "/bookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/Booking" },
+      "description": "Court A and Court B slot bookings keyed deterministically to prevent clashes."
+    },
+    "/slotPricing/{slotId}": {
+      "schema": { "$ref": "#/entities/SlotPricing" },
+      "description": "Standard MYR rental fee configuration for each of the 7 time slots."
+    },
+    "/monthlyAdjustments/{adjustmentId}": {
+      "schema": { "$ref": "#/entities/MonthlyAdjustment" },
+      "description": "Monthly player rental total overrides and payment statuses."
+    },
+    "/maintenance/{maintenanceId}": {
+      "schema": { "$ref": "#/entities/MaintenanceTask" },
+      "description": "Court maintenance schedule and cost records."
+    }
+  }
+}

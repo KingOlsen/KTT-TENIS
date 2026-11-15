@@ -1,0 +1,308 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 1 & Phase 4.1: Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Hardened Global Helpers
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        request.auth.token.email == 'sultanhaseng@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Matches either authenticated UID or shared device actor ID
+    function isMatchingActor(actorField) {
+      return actorField is string &&
+        actorField.size() >= 1 &&
+        actorField.size() <= 128 &&
+        actorField.matches('^[a-zA-Z0-9_\\-]+$') &&
+        (request.auth == null || actorField == request.auth.uid || actorField == 'club_shared_sync');
+    }
+
+    function isValidSlotEnum(slotId) {
+      return slotId is string && slotId.size() <= 12 && (
+        slotId == '0800-1000' ||
+        slotId == '1000-1200' ||
+        slotId == '1200-1500' ||
+        slotId == '1500-1700' ||
+        slotId == '1700-1900' ||
+        slotId == '2000-2200' ||
+        slotId == '2200-2400'
+      );
+    }
+
+    function isValidCourtEnum(courtId) {
+      return courtId is string && courtId.size() <= 10 && (
+        courtId == 'Court A' ||
+        courtId == 'Court B'
+      );
+    }
+
+    // Blueprint Validation Helpers
+    function isValidAdminRole(data) {
+      return data.keys().hasAll(['email', 'createdAt']) &&
+        data.keys().hasOnly(['email', 'createdAt']) &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 120 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidPlayer(data) {
+      return data.keys().hasAll(['clubId', 'name', 'membershipCode', 'membershipType', 'createdBy', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['clubId', 'name', 'membershipCode', 'membershipType', 'createdBy', 'createdAt', 'updatedAt']) &&
+        data.clubId is string && data.clubId.size() <= 32 && data.clubId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.clubId == 'court_club_main' &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+        data.membershipCode is string && data.membershipCode.size() >= 1 && data.membershipCode.size() <= 24 &&
+        data.membershipType is string && data.membershipType.size() <= 20 &&
+        (data.membershipType == 'Team' || data.membershipType == 'Coach' || data.membershipType == 'Member' || data.membershipType == 'Guest') &&
+        isMatchingActor(data.createdBy) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidBooking(data) {
+      return data.keys().hasAll([
+          'clubId', 'date', 'month', 'courtId', 'slotId',
+          'playerId', 'playerName', 'status', 'fee', 'standardFee',
+          'notes', 'createdBy', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'clubId', 'date', 'month', 'courtId', 'slotId',
+          'playerId', 'playerName', 'status', 'fee', 'standardFee',
+          'notes', 'createdBy', 'createdAt', 'updatedAt'
+        ]) &&
+        data.clubId is string && data.clubId.size() <= 32 && data.clubId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.clubId == 'court_club_main' &&
+        data.date is string && data.date.size() == 10 && data.date.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
+        data.month is string && data.month.size() == 7 && data.month.matches('^\\d{4}-\\d{2}$') &&
+        isValidCourtEnum(data.courtId) &&
+        isValidSlotEnum(data.slotId) &&
+        data.playerId is string && data.playerId.size() >= 1 && data.playerId.size() <= 128 && data.playerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.playerName is string && data.playerName.size() >= 1 && data.playerName.size() <= 80 &&
+        data.status is string && data.status.size() <= 20 &&
+        (
+          (data.status == 'active' && data.fee is number && data.fee >= 0 && data.fee <= 10000) ||
+          (data.status == 'rain_cancelled' && data.fee is number && data.fee == 0)
+        ) &&
+        data.standardFee is number && data.standardFee >= 0 && data.standardFee <= 10000 &&
+        data.notes is string && data.notes.size() <= 200 &&
+        isMatchingActor(data.createdBy) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidSlotPricing(data) {
+      return data.keys().hasAll(['clubId', 'slotId', 'label', 'hours', 'fee', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['clubId', 'slotId', 'label', 'hours', 'fee', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        data.clubId is string && data.clubId.size() <= 32 && data.clubId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.clubId == 'court_club_main' &&
+        isValidSlotEnum(data.slotId) &&
+        data.label is string && data.label.size() >= 1 && data.label.size() <= 40 &&
+        data.hours is number && data.hours >= 1 && data.hours <= 5 &&
+        data.fee is number && data.fee >= 0 && data.fee <= 10000 &&
+        isMatchingActor(data.updatedBy) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidMonthlyAdjustment(data) {
+      return data.keys().hasAll([
+          'clubId', 'month', 'playerId', 'playerName',
+          'overrideTotal', 'paymentStatus', 'adminNote',
+          'updatedBy', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'clubId', 'month', 'playerId', 'playerName',
+          'overrideTotal', 'paymentStatus', 'adminNote',
+          'updatedBy', 'createdAt', 'updatedAt'
+        ]) &&
+        data.clubId is string && data.clubId.size() <= 32 && data.clubId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.clubId == 'court_club_main' &&
+        data.month is string && data.month.size() == 7 && data.month.matches('^\\d{4}-\\d{2}$') &&
+        data.playerId is string && data.playerId.size() >= 1 && data.playerId.size() <= 128 && data.playerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.playerName is string && data.playerName.size() >= 1 && data.playerName.size() <= 80 &&
+        data.overrideTotal is number && data.overrideTotal >= -1 && data.overrideTotal <= 100000 &&
+        data.paymentStatus is string && data.paymentStatus.size() <= 12 &&
+        (data.paymentStatus == 'unpaid' || data.paymentStatus == 'paid') &&
+        data.adminNote is string && data.adminNote.size() <= 200 &&
+        isMatchingActor(data.updatedBy) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidMaintenanceTask(data) {
+      return data.keys().hasAll([
+          'clubId', 'date', 'courtId', 'slotId', 'title',
+          'category', 'technician', 'cost', 'status',
+          'notes', 'createdBy', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'clubId', 'date', 'courtId', 'slotId', 'title',
+          'category', 'technician', 'cost', 'status',
+          'notes', 'createdBy', 'createdAt', 'updatedAt'
+        ]) &&
+        data.clubId is string && data.clubId.size() <= 32 && data.clubId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.clubId == 'court_club_main' &&
+        data.date is string && data.date.size() == 10 && data.date.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
+        isValidCourtEnum(data.courtId) &&
+        data.slotId is string && data.slotId.size() <= 12 &&
+        (data.slotId == 'ALL_DAY' || isValidSlotEnum(data.slotId)) &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+        data.category is string && data.category.size() <= 40 &&
+        (
+          data.category == 'Surface Resurfacing' ||
+          data.category == 'Net & Posts' ||
+          data.category == 'Floodlight System' ||
+          data.category == 'Line Repainting' ||
+          data.category == 'Drainage & Rain Clearing' ||
+          data.category == 'General Inspection'
+        ) &&
+        data.technician is string && data.technician.size() <= 80 &&
+        data.cost is number && data.cost >= 0 && data.cost <= 100000 &&
+        data.status is string && data.status.size() <= 20 &&
+        (data.status == 'scheduled' || data.status == 'in_progress' || data.status == 'completed') &&
+        data.notes is string && data.notes.size() <= 300 &&
+        isMatchingActor(data.createdBy) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // 1. Admins Collection
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && isValidId(adminId) && (request.auth.uid == adminId || isAdmin());
+      allow list: if isAdmin() && existing().email == request.auth.token.email;
+      allow create: if isAdmin() && isValidId(adminId) && isValidAdminRole(incoming()) &&
+        incoming().email == request.auth.token.email &&
+        incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isAdmin() && isValidId(adminId);
+    }
+
+    // 2. Players Collection
+    match /players/{playerId} {
+      allow get: if isValidId(playerId) && existing().clubId == 'court_club_main';
+      allow list: if existing().clubId == 'court_club_main';
+      allow create: if isValidId(playerId) && isValidPlayer(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(playerId) && isValidPlayer(incoming()) &&
+        incoming().createdBy == existing().createdBy &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'membershipCode', 'membershipType', 'updatedAt'])
+        );
+      allow delete: if isValidId(playerId) && (isAdmin() || existing().clubId == 'court_club_main');
+    }
+
+    // 3. Bookings Collection
+    match /bookings/{bookingId} {
+      allow get: if isValidId(bookingId) && existing().clubId == 'court_club_main';
+      allow list: if existing().clubId == 'court_club_main';
+      allow create: if isValidId(bookingId) && isValidBooking(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/players/$(incoming().playerId));
+      allow update: if isValidId(bookingId) && isValidBooking(incoming()) &&
+        incoming().createdBy == existing().createdBy &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().date == existing().date &&
+        incoming().month == existing().month &&
+        incoming().courtId == existing().courtId &&
+        incoming().slotId == existing().slotId &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          // Action 1: Rain Cancellation or Revert
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'fee', 'notes', 'updatedAt']) ||
+          // Action 2: Fee or Player Reassignment
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['playerId', 'playerName', 'fee', 'standardFee', 'notes', 'updatedAt']) &&
+            exists(/databases/$(database)/documents/players/$(incoming().playerId))
+          )
+        );
+      allow delete: if isValidId(bookingId) && (isAdmin() || existing().clubId == 'court_club_main');
+    }
+
+    // 4. Slot Pricing Collection
+    match /slotPricing/{slotId} {
+      allow get: if isValidId(slotId) && existing().clubId == 'court_club_main';
+      allow list: if existing().clubId == 'court_club_main';
+      allow create: if isValidId(slotId) && isValidSlotPricing(incoming()) &&
+        incoming().slotId == slotId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(slotId) && isValidSlotPricing(incoming()) &&
+        incoming().slotId == existing().slotId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['fee', 'label', 'updatedBy', 'updatedAt'])
+        );
+      allow delete: if isAdmin() && isValidId(slotId);
+    }
+
+    // 5. Monthly Adjustments Collection
+    match /monthlyAdjustments/{adjustmentId} {
+      allow get: if isValidId(adjustmentId) && existing().clubId == 'court_club_main';
+      allow list: if existing().clubId == 'court_club_main';
+      allow create: if isValidId(adjustmentId) && isValidMonthlyAdjustment(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/players/$(incoming().playerId));
+      allow update: if isValidId(adjustmentId) && isValidMonthlyAdjustment(incoming()) &&
+        incoming().month == existing().month &&
+        incoming().playerId == existing().playerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['overrideTotal', 'paymentStatus', 'adminNote', 'playerName', 'updatedBy', 'updatedAt'])
+        );
+      allow delete: if isAdmin() && isValidId(adjustmentId);
+    }
+
+    // 6. Maintenance Tasks Collection
+    match /maintenance/{maintenanceId} {
+      allow get: if isValidId(maintenanceId) && existing().clubId == 'court_club_main';
+      allow list: if existing().clubId == 'court_club_main';
+      allow create: if isValidId(maintenanceId) && isValidMaintenanceTask(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(maintenanceId) && isValidMaintenanceTask(incoming()) &&
+        incoming().createdBy == existing().createdBy &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (
+            existing().status != 'completed' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'notes', 'cost', 'technician', 'title', 'category', 'slotId', 'courtId', 'date', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(maintenanceId) && (isAdmin() || existing().clubId == 'court_club_main');
+    }
+  }
+}
